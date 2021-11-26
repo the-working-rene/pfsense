@@ -1405,17 +1405,6 @@ function ldap_get_groups($username, $authcfg) {
 		}		
 	}
 
-	if (is_array($gresults)) {
-		/* Iterate through the groups and throw them into an array */
-		foreach ($gresults as $grp) {
-			if (((isset($authcfg['ldap_rfc2307'])) && (stristr($grp["dn"], "CN=") !== false)) ||
-			    ((!isset($authcfg['ldap_rfc2307'])) && (stristr($grp, "CN=") !== false))) {
-				$grpsplit = isset($authcfg['ldap_rfc2307']) ? explode(",", $grp["dn"]) : explode(",", $grp);
-				$memberof[] = preg_replace("/CN=/i", "", $grpsplit[0]);
-			}
-		}
-	}
-
 	/* Time to close LDAP connection */
 	@ldap_unbind($ldap);
 
