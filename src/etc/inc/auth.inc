@@ -1285,6 +1285,7 @@ function ldap_get_groups($username, $authcfg) {
 		$ldapauthcont = $authcfg['ldap_authcn'];
 		$ldapnameattribute = strtolower($authcfg['ldap_attr_user']);
 		$ldapgroupattribute = strtolower($authcfg['ldap_attr_member']);
+		$ldapgroupnameattribute = strtolower($authcfg['ldap_attr_group']);
 		$ldaptype = "";
 		$ldapver = $authcfg['ldap_protver'];
 		if (empty($ldapbindun) || empty($ldapbindpw)) {
@@ -1385,10 +1386,24 @@ function ldap_get_groups($username, $authcfg) {
 		$ldapfilter = "({$ldapnameattribute}={$username})";
 	}
 
-	$search = @$ldapfunc($ldap, $ldapdn, $ldapfilter, array($ldapgroupattribute));
-	$info = @ldap_get_entries($ldap, $search);
-
-	$gresults = isset($authcfg['ldap_rfc2307']) ? $info : $info[0][$ldapgroupattribute];
+	$ldac_splits = explode(";", $ldapauthcont);
+	foreach ($ldac_splits as $i => $ldac_split) {
+		$search = @$ldapfunc($ldap, $ldac_split, $ldapfilter, array($ldapgroupnameattribute));
+		$info = @ldap_get_entries($ldap, $search);
+		
+		$gresults = isset($authcfg['ldap_rfc2307']) ? $info : $info[0][$ldapgroupattribute];
+		
+		if (is_array($gresults)) {
+			/* Iterate through the groups and throw them into an array */
+			foreach ($gresults as $grp) {
+				if (((isset($authcfg['ldap_rfc2307'])) && (stristr($grp["dn"], "CN=") !== false)) ||
+					((!isset($authcfg['ldap_rfc2307'])) && (stristr($grp, "CN=") !== false))) {
+					$grpsplit = isset($authcfg['ldap_rfc2307']) ? explode(",", $grp["dn"]) : explode(",", $grp);
+					$memberof[] = preg_replace("/CN=/i", "", $grpsplit[0]);
+				}
+			}
+		}		
+	}
 
 	if (is_array($gresults)) {
 		/* Iterate through the groups and throw them into an array */
